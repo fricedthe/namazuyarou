@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dark Mesh Chat</title>
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --panel-bg: #151824;
+            --accent-color: #00ffcc;
+            --accent-hover: #00cca3;
+            --text-color: #e2e8f0;
+            --text-muted: #64748b;
+            --border-color: #222533;
+            --message-self: #1e293b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+
+        /* ゲート（グループ選択画面） */
+        .gate-container {
+            background-color: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            width: 100%;
+            max-width: 420px;
+            box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+            text-align: center;
+            z-index: 10;
+            transition: all 0.3s ease;
+        }
+
+        .gate-container h1 {
+            font-size: 1.8rem;
+            margin-bottom: 1.5rem;
+            color: #fff;
+            letter-spacing: 1px;
+        }
+
+        .gate-container h1 span {
+            color: var(--accent-color);
+        }
+
+        .gate-options {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+
+        .gate-btn {
+            flex: 1;
+            background-color: transparent;
+            border: 1px solid var(--border-color);
+            color: var(--text-color);
+            padding: 0.75rem;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: all 0.2s ease;
+        }
+
+        .gate-btn.active {
+            background-color: rgba(0, 255, 204, 0.1);
+            border-color: var(--accent-color);
+            color: var(--accent-color);
+        }
+
+        .input-group {
+            margin-bottom: 1.5rem;
+            text-align: left;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.5rem;
+        }
+
+        .input-field {
+            width: 100%;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        .input-field:focus {
+            border-color: var(--accent-color);
+        }
+
+        .action-btn {
+            width: 100%;
+            background-color: var(--accent-color);
+            color: #0f111a;
+            border: none;
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+
+        .action-btn:hover {
+            background-color: var(--accent-hover);
+        }
+
+        /* チャットUI（初期状態は非表示） */
+        .chat-container {
+            display: none;
+            width: 100%;
+            height: 100vh;
+            grid-template-columns: 260px 1fr;
+        }
+
+        /* サイドバー */
+        .sidebar {
+            background-color: var(--panel-bg);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            padding: 1.5rem;
+        }
+
+        .group-info {
+            padding-bottom: 1.5rem;
+            border-bottom: 1px solid var(--border-color);
+            margin-bottom: 1.5rem;
+        }
+
+        .group-label {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.25rem;
+        }
+
+        .group-code-display {
+            font-size: 1.25rem;
+            font-weight: bold;
+            color: var(--accent-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .copy-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            font-size: 0.85rem;
+        }
+
+        .copy-btn:hover {
+            color: #fff;
+        }
+
+        .user-list-title {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            margin-bottom: 0.75rem;
+        }
+
+        .user-list {
+            list-style: none;
+            flex: 1;
+            overflow-y: auto;
+        }
+
+        .user-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 0;
+            font-size: 0.95rem;
+        }
+
+        .user-status {
+            width: 8px;
+            height: 8px;
+            background-color: var(--accent-color);
+            border-radius: 5px;
+        }
+
+        /* メインチャットエリア */
+        .main-chat {
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            background-color: var(--bg-color);
+        }
+
+        .chat-header {
+            background-color: var(--panel-bg);
+            padding: 1.25rem 2rem;
+            border-bottom: 1px solid var(--border-color);
+            font-weight: 600;
+        }
+
+        .messages-area {
+            flex: 1;
+            padding: 2rem;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .message {
+            max-width: 70%;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .message.self {
+            align-self: flex-end;
+        }
+
+        .message.self .message-content {
+            background-color: var(--message-self);
+            border-top-right-radius: 2px;
+        }
+
+        .message-meta {
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin-bottom: 0.25rem;
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .message.self .message-meta {
+            justify-content: flex-end;
+        }
+
+        .message-content {
+            background-color: var(--panel-bg);
+            padding: 0.75rem 1rem;
+            border-radius: 12px;
+            border-top-left-radius: 2px;
+            line-height: 1.4;
+            word-break: break-all;
+        }
+
+        .chat-input-area {
+            padding: 1.5rem 2rem;
+            background-color: var(--panel-bg);
+            border-top: 1px solid var(--border-color);
+        }
+
+        .chat-form {
+            display: flex;
+            gap: 1rem;
+        }
+
+        .chat-input {
+            flex: 1;
+            background-color: var(--bg-color);
+            border: 1px solid var(--border-color);
+            color: #fff;
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .chat-input:focus {
+            border-color: var(--accent-color);
+        }
+
+        .send-btn {
+            background-color: var(--accent-color);
+            color: #0f111a;
+            border: none;
+            padding: 0.75rem 1.5rem;
+            border-radius: 8px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .send-btn:hover {
+            background-color: var(--accent-hover);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ゲート（初期選択画面） -->
+    <div class="gate-container" id="gateScreen">
+        <h1>DARK <span>MESH</span></h1>
+        
+        <div class="gate-options">
+            <button class="gate-btn active" id="tabCreate" onclick="switchMode('create')">グループ作成</button>
+            <button class="gate-btn" id="tabJoin" onclick="switchMode('join')">グループ参加</button>
+        </div>
+
+        <div class="input-group">
+            <label for="userName">ユーザー名</label>
+            <input type="text" id="userName" class="input-field" placeholder="名無しのアノニマス">
+        </div>
+
+        <div class="input-group" id="codeGroup" style="display: none;">
+            <label for="groupCode">グループコード</label>
+            <input type="text" id="groupCode" class="input-field" placeholder="コードを入力してください">
+        </div>
+
+        <button class="action-btn" id="actionBtn" onclick="submitGate()">部屋を構築する</button>
+    </div>
+
+    <!-- チャット本編UI -->
+    <div class="chat-container" id="chatScreen">
+        <!-- サイドバー -->
+        <aside class="sidebar">
+            <div class="group-info">
+                <div class="group-label">Active Group</div>
+                <div class="group-code-display">
+                    <span id="displayCode">------</span>
+                    <button class="copy-btn" onclick="copyCode()">Copy</button>
+                </div>
+            </div>
+            <div class="user-list-title">接続メンバー</div>
+            <ul class="user-list" id="userList">
+                <!-- メンバーが動的に追加されます -->
+            </ul>
+        </aside>
+
+        <!-- チャットメイン画面 -->
+        <main class="main-chat">
+            <header class="chat-header">
+                暗号化セッション・メインルーム
+            </header>
+            
+            <div class="messages-area" id="messagesArea">
+                <!-- メッセージがここに追加されます -->
+            </div>
+
+            <div class="chat-input-area">
+                <form class="chat-form" onsubmit="sendMessage(event)">
+                    <input type="text" id="chatInput" class="chat-input" placeholder="メッセージを入力..." autocomplete="off">
+                    <button type="submit" class="send-btn">送信</button>
+                </form>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        let currentMode = 'create';
+        let myUsername = '';
+        let activeRoomCode = '';
+
+        // モード切り替え（作成 vs 参加）
+        function switchMode(mode) {
+            currentMode = mode;
+            const tabCreate = document.getElementById('tabCreate');
+            const tabJoin = document.getElementById('tabJoin');
+            const codeGroup = document.getElementById('codeGroup');
+            const actionBtn = document.getElementById('actionBtn');
+
+            if (mode === 'create') {
+                tabCreate.classList.add('active');
+                tabJoin.classList.remove('active');
+                codeGroup.style.display = 'none';
+                actionBtn.innerText = '部屋を構築する';
+            } else {
+                tabCreate.classList.remove('active');
+                tabJoin.classList.add('active');
+                codeGroup.style.display = 'block';
+                actionBtn.innerText = '部屋に潜入する';
+            }
+        }
+
+        // ゲート画面の確定処理
+        function submitGate() {
+            const nameInput = document.getElementById('userName').value.trim();
+            myUsername = nameInput || 'Anonymous';
+
+            if (currentMode === 'create') {
+                // ランダムな6桁のグループコードを生成
+                activeRoomCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+            } else {
+                const codeInput = document.getElementById('groupCode').value.trim();
+                if (!codeInput) {
+                    alert('グループコードを入力してください。');
+                    return;
+                }
+                activeRoomCode = codeInput.toUpperCase();
+            }
+
+            // 画面の切り替え
+            document.getElementById('gateScreen').style.display = 'none';
+            document.getElementById('chatScreen').style.display = 'grid';
+
+            // 初期データの反映
+            document.getElementById('displayCode').innerText = activeRoomCode;
+            
+            // 擬似オンライン接続のセットアップ
+            initMockP2PChat();
+        }
+
+        // グループコードのコピー
+        function copyCode() {
+            navigator.clipboard.writeText(activeRoomCode);
+            alert('グループコードをコピーしました: ' + activeRoomCode);
+        }
+
+        // --- 擬似オンラインチャットロジック (ローカルストレージベース) ---
+        // ※このコードは同一ブラウザの別タブ同士、または同じPC内での擬似同期をデモするための簡易実装です。
+        function initMockP2PChat() {
+            // ユーザーリストに自分を追加
+            addUserToList(myUsername, true);
+            
+            // 部屋への入室システムメッセージ
+            appendSystemMessage(`${myUsername} がセッションに参加しました。`);
+
+            // ローカルストレージを使用したタブ間での簡易的な同期受信設定
+            window.addEventListener('storage', (e) => {
+                if (e.key === `chat_msg_${activeRoomCode}`) {
+                    const data = JSON.parse(e.newValue);
+                    if (data && data.sender !== myUsername) {
+                        appendMessage(data.sender, data.text, false, data.time);
+                    }
+                }
+            });
+        }
+
+        function sendMessage(event) {
+            event.preventDefault();
+            const input = document.getElementById('chatInput');
+            const text = input.value.trim();
+            if (!text) return;
+
+            const now = new Date();
+            const timeStr = now.getHours().toString().padStart(2, '0') + ':' + now.getMinutes().toString().padStart(2, '0');
+
+            // 自分の画面に表示
+            appendMessage(myUsername, text, true, timeStr);
+
+            // 同期用データをローカルストレージへ保存（他のタブに通知される）
+            const packet = {
+                sender: myUsername,
+                text: text,
+                time: timeStr,
+                timestamp: Date.now() // 常に更新をトリガーするため
+            };
+            localStorage.setItem(`chat_msg_${activeRoomCode}`, JSON.stringify(packet));
+
+            input.value = '';
+        }
+
+        function appendMessage(sender, text, isSelf, time) {
+            const area = document.getElementById('messagesArea');
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `message ${isSelf ? 'self' : ''}`;
+            
+            msgDiv.innerHTML = `
+                <div class="message-meta">
+                    <span class="message-sender">${sender}</span>
+                    <span class="message-time">${time}</span>
+                </div>
+                <div class="message-content">${text}</div>
+            `;
+            area.appendChild(msgDiv);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function appendSystemMessage(text) {
+            const area = document.getElementById('messagesArea');
+            const sysDiv = document.createElement('div');
+            sysDiv.style.color = 'var(--text-muted)';
+            sysDiv.style.fontSize = '0.85rem';
+            sysDiv.style.textAlign = 'center';
+            sysDiv.style.margin = '0.5rem 0';
+            sysDiv.innerText = text;
+            area.appendChild(sysDiv);
+            area.scrollTop = area.scrollHeight;
+        }
+
+        function addUserToList(username, isSelf) {
+            const list = document.getElementById('userList');
+            const li = document.createElement('li');
+            li.className = 'user-item';
+            li.innerHTML = `<div class="user-status"></div>${username} ${isSelf ? '(あなた)' : ''}`;
+            list.appendChild(li);
+        }
+    </script>
+</body>
+</html>
+</body>
+</html>
